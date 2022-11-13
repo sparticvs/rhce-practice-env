@@ -1,0 +1,64 @@
+---
+- name: Standup Virtual Practice Environment
+  hosts: localhost
+  vars:
+    - qemu_url: qemu:///system
+  tasks:
+    - name: Create Virtual Network
+      community.libvirt.virt_net:
+        command: create
+        autostart: yes
+        name: lab_net
+        uri: "{{ qemu_url }}"
+        xml: |
+          <network>
+            <name>lab_net</name>
+            <bridge name="virbr0" />
+            <forward mode="nat" />
+            <ip address="192.168.100.1" netmask="255.255.255.0">
+              <dhcp>
+                <range start="192.168.100.10" end="192.168.100.20" />
+              </dhcp>
+            </ip>
+          </network>
+
+
+    - name: Start Virtual Network
+      community.libvirt.virt_net:
+        name: lab_net
+        uri: '{{ qemu_url }}'
+        state: active
+
+    - name: Create Control Node
+      community.libvirt.virt:
+        name: control.rhce.lab
+        command: create
+        autostart: no
+        uri: '{{ qemu_url }}'
+        xml: |
+          <domain type='qemu'>
+            <name>control.rhce.lab</name>
+            <memory unit="GiB">4</memory>
+            <vcpu>2</vcpu>
+            <os>
+              <type arch='x86_64' machine='pc'>hvm</type>
+            </os>
+            <devices>
+              <emulator>/usr/bin/qemu-system-x86_64</emulator>
+              <disk type='file' device='cdrom'>
+                <source file=''/>
+                <target dev='hdc' />
+                <readonly />
+              </disk>
+              <disk type='file' device='disk'>
+                <source file='' />
+                <target dev='hda' />
+              </disk>
+              <interface type='network'>
+                <source network='lab_net' />
+              </interface>
+              <graphics type='vnc' port='-1' />
+            </devices>
+          </domain>
+
+
